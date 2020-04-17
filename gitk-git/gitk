@@ -2059,7 +2059,7 @@ proc makedroplist {w varname args} {
 }
 
 proc makewindow {} {
-    global canv canv2 canv3 linespc charspc ctext cflist cscroll
+    global canv canv2 canv3 canv4 linespc charspc ctext cflist cscroll
     global tabstop
     global findtype findtypemenu findloc findstring fstring geometry
     global entries sha1entry sha1string sha1but
@@ -2144,8 +2144,9 @@ proc makewindow {} {
         set geometry(topwidth) [expr {80 * $charspc}]
         set geometry(botheight) [expr {15 * $linespc}]
         set geometry(botwidth) [expr {50 * $charspc}]
-        set geometry(pwsash0) [list [expr {40 * $charspc}] 2]
-        set geometry(pwsash1) [list [expr {60 * $charspc}] 2]
+        set geometry(pwsash0) [list [expr {40 * $charspc}] 3]
+        set geometry(pwsash1) [list [expr {60 * $charspc}] 3]
+        set geometry(pwsash2) [list [expr {60 * $charspc}] 3]
     }
 
     # the upper half will have a paned window, a scroll bar to the right, and some stuff below
@@ -2174,15 +2175,22 @@ proc makewindow {} {
 	-selectbackground $selectbgcolor \
 	-background $bgcolor -bd 0 -yscrollincr $linespc
     .tf.histframe.pwclist add $canv3
+    set canv4 .tf.histframe.pwclist.canv4
+    canvas $canv4 \
+	-selectbackground $selectbgcolor \
+	-background $bgcolor -bd 0 -yscrollincr $linespc
+    .tf.histframe.pwclist add $canv4
     if {$use_ttk} {
 	bind .tf.histframe.pwclist <Map> {
 	    bind %W <Map> {}
+		.tf.histframe.pwclist sashpos 2 [lindex $::geometry(pwsash2) 0]
 	    .tf.histframe.pwclist sashpos 1 [lindex $::geometry(pwsash1) 0]
 	    .tf.histframe.pwclist sashpos 0 [lindex $::geometry(pwsash0) 0]
 	}
     } else {
 	eval .tf.histframe.pwclist sash place 0 $geometry(pwsash0)
 	eval .tf.histframe.pwclist sash place 1 $geometry(pwsash1)
+	eval .tf.histframe.pwclist sash place 2 $geometry(pwsash2)
     }
 
     # a scroll bar to rule them
@@ -2190,7 +2198,7 @@ proc makewindow {} {
     if {!$use_ttk} {$cscroll configure -highlightthickness 0}
     pack $cscroll -side right -fill y
     bind .tf.histframe.pwclist <Configure> {resizeclistpanes %W %w}
-    lappend bglist $canv $canv2 $canv3
+    lappend bglist $canv $canv2 $canv3 $canv4
     pack .tf.histframe.pwclist -fill both -expand 1 -side left
 
     # we have two button bars at bottom of top frame. Bar 1
@@ -2698,11 +2706,11 @@ proc makewindow {} {
 # the one where the mouse hovers, so bind those events here and redirect
 # to the correct window
 proc windows_mousewheel_redirector {W X Y D} {
-    global canv canv2 canv3
+    global canv canv2 canv3 canv4
     set w [winfo containing -displayof $W $X $Y]
     if {$w ne ""} {
 	set u [expr {$D < 0 ? 5 : -5}]
-	if {$w == $canv || $w == $canv2 || $w == $canv3} {
+	if {$w == $canv || $w == $canv2 || $w == $canv3 || $w == $canv4} {
 	    allcanvs yview scroll $u units
 	} else {
 	    catch {
@@ -2726,8 +2734,8 @@ proc selectedline_change {n1 n2 op} {
 # mouse-2 makes all windows scan vertically, but only the one
 # the cursor is in scans horizontally
 proc canvscan {op w x y} {
-    global canv canv2 canv3
-    foreach c [list $canv $canv2 $canv3] {
+    global canv canv2 canv3 canv4
+    foreach c [list $canv $canv2 $canv3 $canv4] {
 	if {$c == $w} {
 	    $c scan $op $x $y
 	} else {
@@ -2893,9 +2901,11 @@ proc savestuff {w} {
 	if {$current_use_ttk} {
 	    puts $f "set geometry(pwsash0) \"[.tf.histframe.pwclist sashpos 0] 1\""
 	    puts $f "set geometry(pwsash1) \"[.tf.histframe.pwclist sashpos 1] 1\""
+	    puts $f "set geometry(pwsash2) \"[.tf.histframe.pwclist sashpos 2] 1\""
 	} else {
 	    puts $f "set geometry(pwsash0) \"[.tf.histframe.pwclist sash coord 0]\""
 	    puts $f "set geometry(pwsash1) \"[.tf.histframe.pwclist sash coord 1]\""
+	    puts $f "set geometry(pwsash2) \"[.tf.histframe.pwclist sash coord 2]\""
 	}
 	puts $f "set geometry(botwidth) [winfo width .bleft]"
 	puts $f "set geometry(botheight) [winfo height .bleft]"
@@ -2947,22 +2957,29 @@ proc resizeclistpanes {win w} {
 	if {$use_ttk} {
 	    set s0 [$win sashpos 0]
 	    set s1 [$win sashpos 1]
+		set s2 [$win sashpos 2]
 	} else {
 	    set s0 [$win sash coord 0]
 	    set s1 [$win sash coord 1]
+		set s2 [$win sash coord 2]
 	}
 	if {$w < 60} {
 	    set sash0 [expr {int($w/2 - 2)}]
 	    set sash1 [expr {int($w*5/6 - 2)}]
+		set sash2 [expr {int($w*5/6 - 2)}]
 	} else {
 	    set factor [expr {1.0 * $w / $oldwidth($win)}]
 	    set sash0 [expr {int($factor * [lindex $s0 0])}]
 	    set sash1 [expr {int($factor * [lindex $s1 0])}]
+		set sash2 [expr {int($factor * [lindex $s2 0])}]
 	    if {$sash0 < 30} {
 		set sash0 30
 	    }
 	    if {$sash1 < $sash0 + 20} {
 		set sash1 [expr {$sash0 + 20}]
+	    }
+		if {$sash2 < $sash0 + 20} {
+		set sash2 [expr {$sash0 + 20}]
 	    }
 	    if {$sash1 > $w - 10} {
 		set sash1 [expr {$w - 10}]
@@ -2970,13 +2987,21 @@ proc resizeclistpanes {win w} {
 		    set sash0 [expr {$sash1 - 20}]
 		}
 	    }
+		if {$sash2 > $w - 10} {
+		set sash2 [expr {$w - 10}]
+		if {$sash0 > $sash2 - 20} {
+		    set sash0 [expr {$sash2 - 20}]
+		}
+	    }
 	}
 	if {$use_ttk} {
 	    $win sashpos 0 $sash0
 	    $win sashpos 1 $sash1
+		$win sashpos 2 $sash2
 	} else {
 	    $win sash place 0 $sash0 [lindex $s0 1]
 	    $win sash place 1 $sash1 [lindex $s1 1]
+		$win sash place 2 $sash2 [lindex $s2 1]
 	}
     }
     set oldwidth($win) $w
@@ -3012,17 +3037,19 @@ proc resizecdetpanes {win w} {
 }
 
 proc allcanvs args {
-    global canv canv2 canv3
+    global canv canv2 canv3 canv4
     eval $canv $args
     eval $canv2 $args
     eval $canv3 $args
+    eval $canv4 $args
 }
 
 proc bindall {event action} {
-    global canv canv2 canv3
+    global canv canv2 canv3 canv4
     bind $canv $event $action
     bind $canv2 $event $action
     bind $canv3 $event $action
+    bind $canv4 $event $action
 }
 
 proc about {} {
@@ -5184,13 +5211,14 @@ proc initlayout {} {
 }
 
 proc setcanvscroll {} {
-    global canv canv2 canv3 numcommits linespc canvxmax canvy0
+    global canv canv2 canv3 canv4 numcommits linespc canvxmax canvy0
     global lastscrollset lastscrollrows
 
     set ymax [expr {$canvy0 + ($numcommits - 0.5) * $linespc + 2}]
     $canv conf -scrollregion [list 0 0 $canvxmax $ymax]
     $canv2 conf -scrollregion [list 0 0 0 $ymax]
     $canv3 conf -scrollregion [list 0 0 0 $ymax]
+    $canv4 conf -scrollregion [list 0 0 0 $ymax]
     set lastscrollset [clock clicks -milliseconds]
     set lastscrollrows $numcommits
 }
@@ -6110,7 +6138,7 @@ proc drawlines {id} {
 }
 
 proc drawcmittext {id row col} {
-    global linespc canv canv2 canv3 fgcolor curview
+    global linespc canv canv2 canv3 canv4 fgcolor curview
     global cmitlisted commitinfo rowidlist parentlist
     global rowtextx idpos idtags idheads idotherrefs
     global linehtag linentag linedtag selectedline
@@ -6180,6 +6208,8 @@ proc drawcmittext {id row col} {
     set name [lindex $commitinfo($id) 1]
     set date [lindex $commitinfo($id) 2]
     set date [formatdate $date]
+    set date2 [lindex $commitinfo($id) 4]
+    set date2 [formatdate $date2]
     set font mainfont
     set nfont mainfont
     set isbold [ishighlighted $id]
@@ -6198,6 +6228,8 @@ proc drawcmittext {id row col} {
 			   -text $name -font $nfont -tags text]
     set linedtag($id) [$canv3 create text 3 $y -anchor w -fill $fgcolor \
 			   -text $date -font mainfont -tags text]
+    set linedtag($id) [$canv4 create text 3 $y -anchor w -fill $fgcolor \
+			   -text $date2 -font mainfont -tags text]
     if {$selectedline == $row} {
 	make_secsel $id
     }
@@ -7268,7 +7300,7 @@ proc dispnexttag {} {
 }
 
 proc make_secsel {id} {
-    global linehtag linentag linedtag canv canv2 canv3
+    global linehtag linentag linedtag canv canv2 canv3 canv4
 
     if {![info exists linehtag($id)]} return
     $canv delete secsel
@@ -7283,6 +7315,10 @@ proc make_secsel {id} {
     set t [eval $canv3 create rect [$canv3 bbox $linedtag($id)] -outline {{}} \
 	       -tags secsel -fill [$canv3 cget -selectbackground]]
     $canv3 lower $t
+    $canv4 delete secsel
+    set t [eval $canv4 create rect [$canv4 bbox $linedtag($id)] -outline {{}} \
+	       -tags secsel -fill [$canv4 cget -selectbackground]]
+    $canv4 lower $t
 }
 
 proc make_idmark {id} {

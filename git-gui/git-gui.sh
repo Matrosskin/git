@@ -3366,17 +3366,22 @@ pack .vpane.lower.commarea.buttons.rescan -side top -fill x
 lappend disable_on_lock \
 	{.vpane.lower.commarea.buttons.rescan conf -state}
 
-${NS}::button .vpane.lower.commarea.buttons.incall -text [mc "Stage Changed"] \
-	-command do_add_all
-pack .vpane.lower.commarea.buttons.incall -side top -fill x
-lappend disable_on_lock \
-	{.vpane.lower.commarea.buttons.incall conf -state}
+${NS}::label .vpane.lower.commarea.buttons.l2 -text {} \
+	-anchor w \
+	-justify left
+pack .vpane.lower.commarea.buttons.l2 -side top -fill x
 
-if {![is_enabled nocommitmsg]} {
-	${NS}::button .vpane.lower.commarea.buttons.signoff -text [mc "Sign Off"] \
-		-command do_signoff
-	pack .vpane.lower.commarea.buttons.signoff -side top -fill x
-}
+# ${NS}::button .vpane.lower.commarea.buttons.incall -text [mc "Stage Changed"] \
+# 	-command do_add_all
+# pack .vpane.lower.commarea.buttons.incall -side top -fill x
+# lappend disable_on_lock \
+# 	{.vpane.lower.commarea.buttons.incall conf -state}
+
+# if {![is_enabled nocommitmsg]} {
+# 	${NS}::button .vpane.lower.commarea.buttons.signoff -text [mc "Sign Off"] \
+# 		-command do_signoff
+# 	pack .vpane.lower.commarea.buttons.signoff -side top -fill x
+# }
 
 ${NS}::button .vpane.lower.commarea.buttons.commit -text [commit_btn_caption] \
 	-command do_commit
@@ -3385,6 +3390,11 @@ lappend disable_on_lock \
 	{.vpane.lower.commarea.buttons.commit conf -state}
 
 if {![is_enabled nocommit]} {
+	${NS}::label .vpane.lower.commarea.buttons.l3 -text {} \
+		-anchor w \
+		-justify left
+	pack .vpane.lower.commarea.buttons.l3 -side top -fill x
+
 	${NS}::button .vpane.lower.commarea.buttons.push -text [mc Push] \
 		-command do_push_anywhere
 	pack .vpane.lower.commarea.buttons.push -side top -fill x
@@ -3671,6 +3681,7 @@ proc create_common_diff_popup {ctxm} {
 
 set ctxm .vpane.lower.diff.body.ctxm
 menu $ctxm -tearoff 0
+$ctxm add separator
 $ctxm add command \
 	-label [mc "Apply/Reverse Hunk"] \
 	-command {apply_or_revert_hunk $cursorX $cursorY 0}
